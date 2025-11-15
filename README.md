@@ -2,6 +2,7 @@
 
 ## Introducing the team
 ### Anson Fong - Testing Lead
+### Daisy Fragoso - Tools Lead backup
 ### Darren Fang - Engine Lead
 ### Diego Tiscareno - Tools Lead
 ### Mandy Lau - Design Lead
