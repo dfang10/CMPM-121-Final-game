@@ -1,7 +1,7 @@
 # Devlog Entry - [11/14/2025]
 
 ## Introducing the team
-### Anson Fong - Tesing Lead
+### Anson Fong - Testing Lead
 ### Darren Fang - Engine Lead
 ### Diego Tiscareno - Tools Lead
 ### Mandy Lau - Design Lead
