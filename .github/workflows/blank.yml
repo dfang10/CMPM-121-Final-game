@@ -17,11 +17,15 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y unzip curl
 
-      - name: Setup Lua and LuaRocks
+      - name: Setup Lua
         uses: leafo/gh-actions-lua@v10
         with:
-          lua-version: '5.4'
-
+          luaVersion: '5.4'
+      
+      - name: Install LuaRocks
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y luarocks
       - name: Install LuaRocks packages
         run: |
           luarocks install luacheck
