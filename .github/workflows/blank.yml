@@ -29,9 +29,11 @@ jobs:
 
       - name: Install stylua
         run: |
-          curl -L -o stylua.tar.gz https://github.com/JohnnyMorganz/StyLua/releases/download/v0.12.1/stylua-x86_64-unknown-linux-gnu.tar.gz
+      - name: Install stylua
+        run: |
+          curl -L -o stylua.tar.gz https://github.com/JohnnyMorganz/StyLua/releases/download/v0.20.0/stylua-linux-x86_64.tar.gz
           tar -xzf stylua.tar.gz
-          sudo mv stylua /usr/local/bin/stylua || sudo mv stylua /usr/bin/stylua
+          sudo mv stylua /usr/local/bin/stylua || sudo mv stylua* /usr/local/bin/stylua
 
       - name: Check formatting (stylua)
         run: stylua --check .
