@@ -1,4 +1,11 @@
 # Devlog Entry - [11/14/2025]
+Created the repo and read me
+
+# Devlog Entry - [11/21/2025]
+## How we satisfied the software requirements
+
+## Reflection
+
 
 ## Introducing the team
 ### Anson Fong - Testing Lead
