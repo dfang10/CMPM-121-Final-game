@@ -28,14 +28,18 @@ jobs:
       # Install Stylua
       - name: Install Stylua
         uses: JohnnyMorganz/stylua-action@v2
-        
-      # Run stylua --check . to check the formatting
-      - name: Check formatting
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      # Install Luacheck
+      - name: Install Luacheck
+        run: sudo apt-get update && sudo apt-get install -y luacheck
+
+      # Check formatting
+      - name: Stylua Check
         run: stylua --check .
 
-      # Run luacheck
-      - name: Run luacheck
-        run: luacheck . --config .luacheckrc
+      - name: Luacheck
+        run: luacheck .
 
       - name: Run tests (busted)
         run: |
