@@ -2,25 +2,39 @@ name: Lint and Format
 
 on:
   push:
+    branches: [ main ]
   pull_request:
+    branches: [ main ]
 
 jobs:
-  check:
+  lint-and-format:
     runs-on: ubuntu-latest
-
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - name: Install Stylua
-        uses: JohnnyMorganz/stylua-action@v2
+      - name: Setup Lua
+        uses: leafo/gh-actions-lua@v10
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          luaVersion: '5.4'
 
-      - name: Install Luacheck
-        run: sudo apt-get update && sudo apt-get install -y luacheck
+      - name: Install LuaRocks
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y luarocks
 
-      - name: Run Stylua Check
+      - name: Install LuaRocks packages (local)
+        run: |
+          luarocks install --local luacheck
+          echo "$HOME/.luarocks/bin" >> $GITHUB_PATH
+
+      - name: Install stylua
+        run: |
+          curl -L -o stylua.tar.gz https://github.com/JohnnyMorganz/StyLua/releases/download/v0.12.1/stylua-x86_64-unknown-linux-gnu.tar.gz
+          tar -xzf stylua.tar.gz
+          sudo mv stylua /usr/local/bin/stylua || sudo mv stylua /usr/bin/stylua
+
+      - name: Check formatting (stylua)
         run: stylua --check .
 
-      - name: Run Luacheck
-        run: luacheck .
+      - name: Run luacheck
+        run: luacheck . --config .luacheckrc
