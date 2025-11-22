@@ -31,7 +31,7 @@ jobs:
         run: |
       - name: Install stylua
         run: |
-          curl -L -o stylua.tar.gz https://github.com/JohnnyMorganz/StyLua/releases/download/v0.20.0/stylua-linux-x86_64.tar.gz
+          curl -L -o stylua.tar.gz https://github.com/JohnnyMorganz/StyLua
           tar -xzf stylua.tar.gz
           sudo mv stylua /usr/local/bin/stylua || sudo mv stylua* /usr/local/bin/stylua
 
