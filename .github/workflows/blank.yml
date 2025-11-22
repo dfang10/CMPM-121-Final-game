@@ -25,12 +25,18 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v4
 
-      # Runs a single command using the runners shell
-      - name: Run a one-line script
-        run: echo Hello, world!
+      # Run stylua --check . to check the formatting
+      - name: Check formatting
+        run: stylua --check .
 
-      # Runs a set of commands using the runners shell
-      - name: Run a multi-line script
+      # Run luacheck
+      - name: Run luacheck
+        run: luacheck . --config .luacheckrc
+
+      - name: Run tests (busted)
         run: |
-          echo Add other actions to build,
-          echo test, and deploy your project.
+          if [ -d "spec" ]; then
+            busted -v
+          else
+            echo "No spec/ directory found — skipping busted"
+          fi
