@@ -2,7 +2,7 @@ name: Code Quality Check
 
 on:
   push:
-    branches: [ main, develop, feature/* ]
+    branches: [ main, develop ]
   pull_request:
     branches: [ main ]
 
@@ -14,15 +14,24 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       
-    - name: Setup Lua
-      uses: leafo/gh-actions-lua@v8
-      with:
-        luaVersion: 5.4
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y lua5.4 liblua5.4-dev build-essential
+        
+    - name: Install LuaRocks
+      run: |
+        wget https://luarocks.org/releases/luarocks-3.9.2.tar.gz
+        tar zxpf luarocks-3.9.2.tar.gz
+        cd luarocks-3.9.2
+        ./configure --with-lua-include=/usr/include/lua5.4
+        make && sudo make install
+        cd ..
         
     - name: Install linting tools
       run: |
-        luarocks install luacheck
-        luarocks install lua-format
+        sudo luarocks install luacheck
+        sudo luarocks install lua-format
         
     - name: Run Lua linting
       run: |
