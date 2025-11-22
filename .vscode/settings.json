@@ -1,0 +1,11 @@
+{
+  "editor.formatOnSave": true,
+
+  "stylua.enable": true,
+
+  "luacheck.enable": true,
+  "luacheck.run": "onSave",
+
+  "git.validation.enabled": true,
+  "git.validation.skip": false
+}
