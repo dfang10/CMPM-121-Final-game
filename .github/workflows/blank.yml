@@ -9,29 +9,18 @@ on:
 jobs:
   code-quality:
     runs-on: ubuntu-latest
-    
+    container:
+      image: lua:5.4
+      
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y lua5.4 liblua5.4-dev build-essential
-        
-    - name: Install LuaRocks
-      run: |
-        wget https://luarocks.org/releases/luarocks-3.9.2.tar.gz
-        tar zxpf luarocks-3.9.2.tar.gz
-        cd luarocks-3.9.2
-        ./configure --with-lua-include=/usr/include/lua5.4
-        make && sudo make install
-        cd ..
-        
     - name: Install linting tools
       run: |
-        sudo luarocks install luacheck
-        sudo luarocks install lua-format
+        apt-get update && apt-get install -y luarocks
+        luarocks install luacheck
+        luarocks install lua-format
         
     - name: Run Lua linting
       run: |
@@ -48,20 +37,10 @@ jobs:
         find . -name "*.lua" -exec lua-format -i {} \;
         
         # Check if any files were modified
-        if git diff --exit-code; then
-          echo "✅ Code formatting is correct!"
-        else
+        if ! git diff --exit-code; then
           echo "❌ Code formatting issues detected!"
           echo "The following files need formatting:"
           git diff --name-only
-          echo ""
-          echo "To fix locally, run:"
-          echo "  make format"
-          echo "Or install pre-commit hooks:"
-          echo "  pre-commit install"
           exit 1
         fi
-        
-    - name: Cleanup backups
-      run: |
-        find . -name "*.lua.bak" -delete
+        echo "✅ Code formatting is correct!"
