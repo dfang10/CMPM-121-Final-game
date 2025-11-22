@@ -25,6 +25,10 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v4
 
+      # Install Stylua
+      - name: Install Stylua
+        uses: JohnnyMorganz/stylua-action@v2
+        
       # Run stylua --check . to check the formatting
       - name: Check formatting
         run: stylua --check .
