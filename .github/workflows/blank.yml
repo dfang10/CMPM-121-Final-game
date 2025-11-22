@@ -1,45 +1,43 @@
-# This is a basic workflow to help you get started with Actions
-
 name: CI
 
-# Controls when the workflow will run
 on:
-  # Triggers the workflow on push or pull request events but only for the "main" branch
   push:
-    branches: [ "main" ]
+    branches: [ main ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ main ]
 
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
-
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
-  build:
-    # The type of runner that the job will run on
+  lint-and-test:
     runs-on: ubuntu-latest
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v4
 
-      # Install Stylua
-      - name: Install Stylua
-        uses: JohnnyMorganz/stylua-action@v2
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-      # Install Luacheck
-      - name: Install Luacheck
-        run: sudo apt-get update && sudo apt-get install -y luacheck
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y unzip curl
 
-      # Check formatting
-      - name: Stylua Check
+      - name: Setup Lua and LuaRocks
+        uses: leafo/setup-lua@v8
+        with:
+          lua-version: '5.4'
+
+      - name: Install LuaRocks packages
+        run: |
+          luarocks install luacheck
+          luarocks install busted
+
+      - name: Install stylua
+        run: |
+          curl -L -o stylua.tar.gz https://github.com/JohnnyMorganz/StyLua/releases/download/v0.12.1/stylua-x86_64-unknown-linux-gnu.tar.gz
+          tar -xzf stylua.tar.gz
+          sudo mv stylua /usr/local/bin/stylua || sudo mv stylua /usr/bin/stylua
+
+      - name: Check formatting (stylua)
         run: stylua --check .
 
-      - name: Luacheck
-        run: luacheck .
+      - name: Run luacheck
+        run: luacheck . --config .luacheckrc
 
       - name: Run tests (busted)
         run: |
