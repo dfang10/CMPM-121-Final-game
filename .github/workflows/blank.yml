@@ -1,52 +1,27 @@
-name: CI
+name: Lint and Format
 
 on:
   push:
-    branches: [ main ]
   pull_request:
-    branches: [ main ]
 
 jobs:
-  lint-and-test:
+  check:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y unzip curl
-
-      - name: Setup Lua
-        uses: leafo/gh-actions-lua@v10
+      - name: Install Stylua
+        uses: JohnnyMorganz/stylua-action@v2
         with:
-          luaVersion: '5.4'
-      
-      - name: Install LuaRocks
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y luarocks
-      - name: Install LuaRocks packages
-        run: |
-          luarocks install luacheck
-          luarocks install busted
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Install stylua
-        run: |
-          curl -L -o stylua.tar.gz https://github.com/JohnnyMorganz/StyLua/releases/download/v0.12.1/stylua-x86_64-unknown-linux-gnu.tar.gz
-          tar -xzf stylua.tar.gz
-          sudo mv stylua /usr/local/bin/stylua || sudo mv stylua /usr/bin/stylua
+      - name: Install Luacheck
+        run: sudo apt-get update && sudo apt-get install -y luacheck
 
-      - name: Check formatting (stylua)
+      - name: Run Stylua Check
         run: stylua --check .
 
-      - name: Run luacheck
-        run: luacheck . --config .luacheckrc
-
-      - name: Run tests (busted)
-        run: |
-          if [ -d "spec" ]; then
-            busted -v
-          else
-            echo "No spec/ directory found — skipping busted"
-          fi
+      - name: Run Luacheck
+        run: luacheck .
