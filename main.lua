@@ -222,27 +222,25 @@ function love.update(dt)
 	win.model:setScale(win.w, win.h, win.w)
 
 	-- Camera follow
-	local player3DX, player3DY, player3DZ = to3D(player.x + player.w / 2, player.y + player.h / 2)
+	local px, py, pz = to3D(player.x + player.w/2, player.y + player.h/2)
 
-	-- 相机相对玩家的偏移
-	local camOffsetX = -40   -- 左右：负数在玩家左侧，正数在右侧
-	local camHeight  = 220   -- 高度：越大越俯视
-	local camDistZ   = -260  -- 前后：负数在玩家身后，正数在前面
+local camSideOffset = -350   -- 镜头离玩家有多远（横向）
+local camHeight     = 120    -- 镜头比玩家高多少
+local camDepth      = 140    -- Z轴深度（用来看到3D厚度）
 
-	g3d.camera.position = {
-		player3DX + camOffsetX,
-		camHeight,
-		player3DZ + camDistZ,
-	}
+g3d.camera.position = {
+    px + camSideOffset,   -- 镜头在玩家左侧（负号表示左）
+    camHeight,            -- 镜头在玩家上方
+    pz + camDepth         -- 镜头稍微偏内侧，让 3D 看起来有厚度
+}
 
-	-- 让相机看向玩家前方一点，这样视线沿着跑道
-	g3d.camera.target = {
-		player3DX,
-		0,
-		player3DZ + 150,
-	}
+g3d.camera.target = {
+    px + 200,   -- 看向前面一点（右边）
+    py,         -- 与玩家同高
+    pz          -- 不偏上下
+}
 
-	g3d.camera.up = { 0, 1, 0 }
+g3d.camera.up = {0,1,0}
 
 	local fallThreshold = platform.y + 200
 
