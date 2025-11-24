@@ -223,8 +223,25 @@ function love.update(dt)
 
 	-- Camera follow
 	local player3DX, player3DY, player3DZ = to3D(player.x + player.w / 2, player.y + player.h / 2)
-	g3d.camera.position = { player3DX - 100, 250, player3DZ + 200 }
-	g3d.camera.target = { player3DX, 0, player3DZ }
+
+	-- 相机相对玩家的偏移
+	local camOffsetX = -40   -- 左右：负数在玩家左侧，正数在右侧
+	local camHeight  = 220   -- 高度：越大越俯视
+	local camDistZ   = -260  -- 前后：负数在玩家身后，正数在前面
+
+	g3d.camera.position = {
+		player3DX + camOffsetX,
+		camHeight,
+		player3DZ + camDistZ,
+	}
+
+	-- 让相机看向玩家前方一点，这样视线沿着跑道
+	g3d.camera.target = {
+		player3DX,
+		0,
+		player3DZ + 150,
+	}
+
 	g3d.camera.up = { 0, 1, 0 }
 
 	local fallThreshold = platform.y + 200
