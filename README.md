@@ -3,9 +3,10 @@ Created the repo and read me
 
 # Devlog Entry - [11/21/2025]
 ## How we satisfied the software requirements
+The third party rendering library we used is Groverburder’s 3D (g3d) engine. This rendering library is compatible with LOVE2D allowing us to implement 3d assets along with the physics mechanics. Our game fulfills the F1 requirements, as a puzzle game build on a platform that originally doesn’t support 3D rendering/physics simulation but with the help of Groverburger’s 3D engine we implemented 3D assets and physics mechanics. The puzzle involves the player having to push a box over the red death zone so the player can have a platform to jump over the death zone. 
 
 ## Reflection
-
+We continued using Love2d. Are tools expanded compared to the original plan. We initially stated at visual studio code and Pixilart as our only tools but we expanded to use Groverburger’s 3D (g3d) for use of 3D features in LOVE2D.  Our team roles also changed as we recognized that some members have more programming experience. We switched roles to better enhance the flow of the project and allow teammates with more knowledge an opportunity to take on leadership roles. 
 
 ## Introducing the team
 ### Anson Fong - Testing Lead
