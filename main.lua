@@ -13,7 +13,7 @@ local gameWon = false
 
 -- Convert 2D physics coordinates to 3D
 local function to3D(x, y)
-	return x, 0, y
+	return x, -y, 0
 end
 
 function love.load()
@@ -190,57 +190,60 @@ function love.update(dt)
 		end
 	end
 
-	-- Update 3D positions
-	local px, py, pz = to3D(player.x + player.w / 2, player.y + player.h / 2)
-	player.model:setTranslation(px, 15, pz)
+	-- === PLAYER MODEL ===
+	local px = player.x + player.w/2
+	local py = player.y + player.h/2
+	player.model:setTranslation(px, -py, 0)
 	player.angle = player.angle + (player.vx / player.r) * dt
 	player.model:setAxisAngleRotation(0, 0, 1, player.angle)
 
-	-- Main platform positioning
-	local platX, platY, platZ = to3D(platform.x + platform.w / 2, platform.y + platform.h / 2)
-	platform.model:setTranslation(platX, 8, platZ)
-	platform.model:setScale(platform.w, 16, platform.h)
+	-- === MAIN PLATFORM ===
+	local cx = platform.x + platform.w/2
+	local cy = platform.y + platform.h/2
+	platform.model:setTranslation(cx, -cy, 0)
+	platform.model:setScale(platform.w, platform.h, 20)
 
-	-- Void platform positioning
-	local voidX, voidY, voidZ = to3D(void.x + void.w / 2, void.y + void.h / 2)
-	void.model:setTranslation(voidX, 8, voidZ)
-	void.model:setScale(void.w, 16, platform.h)
+	-- === VOID PLATFORM ===
+	local vx = void.x + void.w/2
+	local vy = void.y + void.h/2
+	void.model:setTranslation(vx, -vy, 0)
+	void.model:setScale(void.w, void.h, 20)
 
-	-- End platform positioning
-	local endX, endY, endZ = to3D(platformEnd.x + platformEnd.w / 2, platformEnd.y + platformEnd.h / 2)
-	platformEnd.model:setTranslation(endX, 8, endZ)
-	platformEnd.model:setScale(platformEnd.w, 16, platformEnd.h)
+	-- === END PLATFORM ===
+	local ex = platformEnd.x + platformEnd.w/2
+	local ey = platformEnd.y + platformEnd.h/2
+	platformEnd.model:setTranslation(ex, -ey, 0)
+	platformEnd.model:setScale(platformEnd.w, platformEnd.h, 20)
 
-	-- Block positioning
-	local blockX, blockY, blockZ = to3D(block.x + block.w / 2, block.y + block.h / 2)
-	block.model:setTranslation(blockX, 20, blockZ)
-	block.model:setScale(block.w, block.h, block.w)
+	-- === BLOCK ===
+	local bx = block.x + block.w/2
+	local by = block.y + block.h/2
+	block.model:setTranslation(bx, -by, 0)
+	block.model:setScale(block.w, block.h, 20)
 
-	-- Win block positioning
-	local winX, winY, winZ = to3D(win.x + win.w / 2, win.y + win.h / 2)
-	win.model:setTranslation(winX, 25, winZ)
-	win.model:setScale(win.w, win.h, win.w)
+	-- === WIN BLOCK ===
+	local wx = win.x + win.w/2
+	local wy = win.y + win.h/2
+	win.model:setTranslation(wx, -wy, 0)
+	win.model:setScale(win.w, win.h, 20)
+
 
 	-- Camera follow
 	local px, py, pz = to3D(player.x + player.w/2, player.y + player.h/2)
 
-local camSideOffset = -350   -- 镜头离玩家有多远（横向）
-local camHeight     = 120    -- 镜头比玩家高多少
-local camDepth      = 140    -- Z轴深度（用来看到3D厚度）
+	-- FIXED CAMERA POSITION
+	local px = player.x + player.w/2
+	local py = player.y + player.h/2
 
-g3d.camera.position = {
-    px + camSideOffset,   -- 镜头在玩家左侧（负号表示左）
-    camHeight,            -- 镜头在玩家上方
-    pz + camDepth         -- 镜头稍微偏内侧，让 3D 看起来有厚度
-}
+	local camX = px    -- left of player
+	local camY = -py + 50   -- above player (flip y!)
+	local camZ = 250         -- out of screen
 
-g3d.camera.target = {
-    px + 200,   -- 看向前面一点（右边）
-    py,         -- 与玩家同高
-    pz          -- 不偏上下
-}
+	g3d.camera.position = { camX, camY, camZ }
+	g3d.camera.target   = { px, -py, 0 }   -- IMPORTANT: camera looks at flipped y
+	g3d.camera.up       = { 0, 1, 0 }
 
-g3d.camera.up = {0,1,0}
+
 
 	local fallThreshold = platform.y + 200
 
