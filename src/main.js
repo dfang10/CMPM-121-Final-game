@@ -19,7 +19,7 @@ const BOARD_THICK = 0.5;
 const BALL_RADIUS = 0.5;
 
 // 终点洞参数
-const HOLE_RADIUS = 0.6;
+const HOLE_RADIUS = 0.9;
 let holeMesh;
 const holeWorldPos = new THREE.Vector3();
 
@@ -237,14 +237,10 @@ function checkGoal() {
   const dz = ballBody.position.z - holeWorldPos.z;
   const horizontalDist = Math.sqrt(dx * dx + dz * dz);
 
-  const effectiveRadius = HOLE_RADIUS * 0.7;
-  const verticalDelta = ballBody.position.y - holeWorldPos.y;
+  // 判定半径：比洞稍微小一点，这样看起来差不多对准就会进
+  const triggerRadius = HOLE_RADIUS * 0.9;
 
-  // 条件：水平距离足够近 & 球比洞中心低一些 → 认为掉进洞
-  if (
-    horizontalDist < effectiveRadius &&
-    verticalDelta < BALL_RADIUS * 0.5
-  ) {
+  if (horizontalDist < triggerRadius) {
     levelComplete = true;
 
     // 移除物理刚体 & 隐藏球
