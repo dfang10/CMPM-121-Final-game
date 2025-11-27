@@ -18,6 +18,8 @@ const BOARD_SIZE = 10;
 const BOARD_THICK = 0.5;
 const BALL_RADIUS = 0.5;
 
+const BALL_VISUAL_OFFSET_Y = -0.05;
+
 let lastTime = 0;
 
 initScene();
@@ -230,19 +232,7 @@ function animate(time) {
 
   world.step(1 / 60, dt, 5);
 
-  // 防止球在板子区域内“掉穿板子”
-  const minBallY = BOARD_THICK / 2 + BALL_RADIUS;
-  const halfSize = BOARD_SIZE / 2;
-  if (
-    Math.abs(ballBody.position.x) <= halfSize &&
-    Math.abs(ballBody.position.z) <= halfSize &&
-    ballBody.position.y < minBallY
-  ) {
-    ballBody.position.y = minBallY;
-    if (ballBody.velocity.y < 0) {
-      ballBody.velocity.y = 0;
-    }
-  }
+
 
   // 同步可视化
   ballMesh.position.copy(ballBody.position);
