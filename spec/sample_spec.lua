@@ -1,5 +1,0 @@
-describe("math", function()
-    it("adds numbers", function()
-        assert.is.equal(2, 1 + 1)
-    end)
-end)
