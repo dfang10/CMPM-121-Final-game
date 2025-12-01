@@ -9,13 +9,17 @@ let boardMesh, boardBody;
 let ballMesh, ballBody;
 const wallMeshes = [];
 
+//wall 
+const WALL_THICKNESS = 0.4;
+const WALL_HEIGHT = 5.0;   
+
 // 倾斜状态
 const tilt = { x: 0, z: 0 };
 const tiltTarget = { x: 0, z: 0 };
 
 // 尺寸常量
 const BOARD_SIZE = 10;
-const BOARD_THICK = 0.5;
+const BOARD_THICK = 1;
 const BALL_RADIUS = 0.5;
 
 // 终点洞参数
@@ -28,10 +32,14 @@ let winShown = false;
 
 let lastTime = 0;
 
+// physics constraints
+const PHYSICS_BOARD_MARGIN = 5;
+
 initScene();
 initPhysics();
 createBoard();
 createWalls();
+createLid(); //lid cover
 createBall();
 createGoalHole();   // 👈 随机生成终点洞
 initControls();
@@ -90,8 +98,12 @@ function createBoard() {
 
   // cannon 板子刚体（后面围墙也作为它的子 shape）
   const boardShape = new CANNON.Box(
-    new CANNON.Vec3(BOARD_SIZE / 2, BOARD_THICK / 2, BOARD_SIZE / 2)
-  );
+  new CANNON.Vec3(
+    BOARD_SIZE / 2 + PHYSICS_BOARD_MARGIN,
+    BOARD_THICK / 2,
+    BOARD_SIZE / 2 + PHYSICS_BOARD_MARGIN
+  )
+);
   boardBody = new CANNON.Body({ mass: 0 });
   boardBody.addShape(boardShape);
   boardBody.position.set(0, 0, 0);
@@ -99,68 +111,125 @@ function createBoard() {
 }
 
 function createWalls() {
-  const wallThickness = 0.4;
-  const wallHeight = 1.0;
-  const WALL_OVERLAP = 0.4; // 墙比板子略长，避免角落有缝
+  const wallThickness = WALL_THICKNESS;
+  const fullWallHeight = WALL_HEIGHT;   // physics height
+  const WALL_OVERLAP = 0.4;
+
+  // visual heights
+  const bottomHeight = 1.0;                  // blue lower rim
+  const topHeight = fullWallHeight - bottomHeight; // clear upper section
 
   const halfThick = wallThickness / 2;
-  const halfHeight = wallHeight / 2;
+  const halfFullHeight = fullWallHeight / 2;
+  const halfBottom = bottomHeight / 2;
+  const halfTop = topHeight / 2;
+
+  //walls material
+  const bottomMat = new THREE.MeshStandardMaterial({
+    color: 0x1e90ff,  
+  });
+
+  const topMat = new THREE.MeshPhysicalMaterial({
+    color: 0x144a9b, 
+    transparent: true,
+    opacity: 0.35,
+    transmission: 0.9,
+    thickness: 0.3,
+    roughness: 0.1,
+    metalness: 0.0,
+  });
 
   const wallConfig = [
     // +X 右边
-    {
-      x: BOARD_SIZE / 2 + halfThick,
-      z: 0,
-      len: BOARD_SIZE + WALL_OVERLAP,
-      axis: "x",
-    },
+    { x:  BOARD_SIZE / 2 + halfThick, z: 0, len: BOARD_SIZE + WALL_OVERLAP, axis: "x" },
     // -X 左边
-    {
-      x: -BOARD_SIZE / 2 - halfThick,
-      z: 0,
-      len: BOARD_SIZE + WALL_OVERLAP,
-      axis: "x",
-    },
+    { x: -BOARD_SIZE / 2 - halfThick, z: 0, len: BOARD_SIZE + WALL_OVERLAP, axis: "x" },
     // +Z 上边
-    {
-      x: 0,
-      z: BOARD_SIZE / 2 + halfThick,
-      len: BOARD_SIZE + WALL_OVERLAP,
-      axis: "z",
-    },
+    { x: 0, z:  BOARD_SIZE / 2 + halfThick, len: BOARD_SIZE + WALL_OVERLAP, axis: "z" },
     // -Z 下边
-    {
-      x: 0,
-      z: -BOARD_SIZE / 2 - halfThick,
-      len: BOARD_SIZE + WALL_OVERLAP,
-      axis: "z",
-    },
+    { x: 0, z: -BOARD_SIZE / 2 - halfThick, len: BOARD_SIZE + WALL_OVERLAP, axis: "z" },
+  
   ];
 
   wallConfig.forEach((w) => {
-    let meshGeo, halfExtents;
+    //  geometry extents for each axis
+    let physicsHalfExtents;
+    let bottomGeo, topGeo;
 
     if (w.axis === "x") {
-      meshGeo = new THREE.BoxGeometry(wallThickness, wallHeight, w.len);
-      halfExtents = new CANNON.Vec3(halfThick, halfHeight, w.len / 2);
+      // along Z
+      physicsHalfExtents = new CANNON.Vec3(halfThick, halfFullHeight, w.len / 2);
+
+      bottomGeo = new THREE.BoxGeometry(wallThickness, bottomHeight, w.len);
+      topGeo = new THREE.BoxGeometry(wallThickness, topHeight, w.len);
     } else {
-      meshGeo = new THREE.BoxGeometry(w.len, wallHeight, wallThickness);
-      halfExtents = new CANNON.Vec3(w.len / 2, halfHeight, halfThick);
+      // along X
+      physicsHalfExtents = new CANNON.Vec3(w.len / 2, halfFullHeight, halfThick);
+
+      bottomGeo = new THREE.BoxGeometry(w.len, bottomHeight, wallThickness);
+      topGeo    = new THREE.BoxGeometry(w.len, topHeight, wallThickness);
     }
 
-    const mat = new THREE.MeshStandardMaterial({ color: 0x144a9b });
-    const mesh = new THREE.Mesh(meshGeo, mat);
-    const y = BOARD_THICK / 2 + halfHeight;
-    mesh.position.set(w.x, y, w.z);
-    boardMesh.add(mesh); // 可视上绑定到板子
-    wallMeshes.push(mesh);
+    // ---- blue bottom wall 
+    const bottomMesh = new THREE.Mesh(bottomGeo, bottomMat);
+    const bottomY = BOARD_THICK / 2 + halfBottom;
+    bottomMesh.position.set(w.x, bottomY, w.z);
+    boardMesh.add(bottomMesh);
 
-    // 物理上作为 boardBody 的附加 shape
-    const shape = new CANNON.Box(halfExtents);
-    const offset = new CANNON.Vec3(w.x, y, w.z);
+    // ---- clear wall - visual 
+    const topMesh = new THREE.Mesh(topGeo, topMat);
+    const topY = BOARD_THICK / 2 + bottomHeight + halfTop;
+    topMesh.position.set(w.x, topY, w.z);
+    boardMesh.add(topMesh);
+
+    wallMeshes.push(bottomMesh, topMesh);
+
+    //  physics barrier 
+    const shape = new CANNON.Box(physicsHalfExtents);
+    const physicsCenterY = BOARD_THICK / 2 - 0.05 + halfFullHeight;
+    const offset = new CANNON.Vec3(w.x, physicsCenterY, w.z);
     boardBody.addShape(shape, offset);
   });
 }
+
+//  clear lid to prevent it from going over the box 
+function createLid() {
+   const wallThickness = WALL_THICKNESS;
+  const wallHeight = WALL_HEIGHT;
+
+  const lidWidth  = BOARD_SIZE + 2 * wallThickness + 0.4;
+  const lidDepth  = BOARD_SIZE + 2 * wallThickness + 0.4;
+  const lidHeight = 0.1;
+
+  const lidGeo = new THREE.BoxGeometry(lidWidth, lidHeight, lidDepth);
+  const lidMat = new THREE.MeshPhysicalMaterial({
+    color: 0xffffff,
+    transparent: true,
+    opacity: 0.15,
+    transmission: 0.95,
+    thickness: 0.4,
+    roughness: 0.1,
+    metalness: 0.0,
+  });
+
+  const lidMesh = new THREE.Mesh(lidGeo, lidMat);
+
+  const lidY = BOARD_THICK / 2 + wallHeight + lidHeight / 2;
+  lidMesh.position.set(0, lidY, 0);
+  boardMesh.add(lidMesh);
+
+  // physics for lid 
+  const halfWidth  = lidWidth  / 2;
+  const halfDepth  = lidDepth  / 2;
+  const halfHeight = lidHeight / 2;
+
+  const lidShape = new CANNON.Box(
+    new CANNON.Vec3(halfWidth, halfHeight, halfDepth)
+  );
+  const lidOffset = new CANNON.Vec3(0, lidY, 0);
+  boardBody.addShape(lidShape, lidOffset);
+}
+
 
 function createBall() {
   const geo = new THREE.SphereGeometry(BALL_RADIUS, 32, 32);
