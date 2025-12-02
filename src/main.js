@@ -11,6 +11,9 @@ let boardMesh, boardBody;
 let ballMesh, ballBody;
 const wallMeshes = [];
 
+const FIXED_TIME_STEP = 1 / 120; 
+const MAX_SUB_STEPS   = 10;  
+
 //wall 
 const WALL_THICKNESS = 0.4;
 const WALL_HEIGHT = 5.0;   
@@ -34,14 +37,21 @@ let winShown = false;
 
 let lastTime = 0;
 
+//kill zone
+const KILL_RADIUS = 1.0;
+let killMesh;
+const killWorldPos = new THREE.Vector3();
+
 //KEY
 let keyMesh;
 let keyCollected = false;
 const keyWorldPosition = new THREE.Vector3();   // world position of key
 const keyPickupRadius = 0.8;
+let keyMessageDiv = null;
 
 // physics constraints
 const PHYSICS_BOARD_MARGIN = 5;
+
 
 initScene();
 initPhysics();
@@ -50,6 +60,7 @@ createWalls();
 createLid(); //lid cover
 createBall();
 createGoalHole();   // 👈 随机生成终点洞
+createKillZone();
 createKeyFromGLB();
 initControls();
 animate();
@@ -260,6 +271,23 @@ function createKeyFromGLB() {
   });
 }
 
+function createKillZone() {
+  const margin = 1.5;
+  const range = BOARD_SIZE / 2 - margin;
+
+  const x = (Math.random() * 2 - 1) * range;
+  const z = (Math.random() * 2 - 1) * range;
+  const y = BOARD_THICK / 2 + 0.001;
+
+  const geo = new THREE.CylinderGeometry(KILL_RADIUS, KILL_RADIUS, 0.02, 32);
+  const mat = new THREE.MeshBasicMaterial({ color: 0xff0000 }); // red color zone
+
+  killMesh = new THREE.Mesh(geo, mat);
+  killMesh.position.set(x, y, z);
+
+  boardMesh.add(killMesh);
+}
+
 function createBall() {
   const geo = new THREE.SphereGeometry(BALL_RADIUS, 32, 32);
   const mat = new THREE.MeshStandardMaterial({ color: 0xff5555 });
@@ -300,7 +328,7 @@ function createGoalHole() {
 }
 
 function initControls() {
-  const maxTilt = (40 * Math.PI) / 180; // 最大 40°
+  const maxTilt = (25 * Math.PI) / 180; // 最大 40°
 
   window.addEventListener("keydown", (e) => {
     if (e.key === "w" || e.key === "ArrowUp") tiltTarget.x = -maxTilt;
@@ -344,9 +372,12 @@ function checkKeyPickup() {
 }
 
 function showKeyMessage() {
-  const div = document.createElement("div");
-  div.textContent = "Key collected!";
-  Object.assign(div.style, {
+  if (keyMessageDiv) return;
+
+  keyMessageDiv = document.createElement("div");
+  keyMessageDiv.textContent = "Key collected!";
+
+  Object.assign(keyMessageDiv.style, {
     position: "fixed",
     top: "60px",
     left: "50%",
@@ -360,7 +391,46 @@ function showKeyMessage() {
     borderRadius: "8px",
     zIndex: 9998,
   });
-  document.body.appendChild(div);
+
+  document.body.appendChild(keyMessageDiv);
+}
+
+function checkKillZone() {
+  if (!killMesh) return;
+
+  killMesh.getWorldPosition(killWorldPos);
+
+  const dx = ballBody.position.x - killWorldPos.x;
+  const dz = ballBody.position.z - killWorldPos.z;
+  const horizontalDist = Math.sqrt(dx * dx + dz * dz);
+
+  if (horizontalDist < KILL_RADIUS) {
+    handleDeath();
+  }
+}
+
+function handleDeath() {
+  console.log("You died!");
+
+  // respawn at start
+  ballBody.position.set(0, 2, 0);
+
+  ballBody.velocity.set(0, 0, 0);
+  ballBody.angularVelocity.set(0, 0, 0);
+
+  // reset board tilt
+  tilt.x = 0;
+  tilt.z = 0;
+  tiltTarget.x = 0;
+  tiltTarget.z = 0;
+
+  keyMesh.visible = true;
+  keyCollected = false;
+
+  if (keyMessageDiv) {
+    keyMessageDiv.remove();
+    keyMessageDiv = null; 
+  }
 }
 
 function checkGoal() {
@@ -416,12 +486,19 @@ function showWinMessage() {
   document.body.appendChild(div);
 }
 
+// const FIXED_TIME_STEP = 1 / 120; 
+// const MAX_SUB_STEPS   = 10;  
+
 function animate(time) {
   requestAnimationFrame(animate);
 
-  const dt = lastTime ? (time - lastTime) / 1000 : 0;
+  let dt = lastTime ? (time - lastTime) / 1000 : 0;
   lastTime = time;
 
+  // clamp dt so a giant lag spike doesn’t explode physics
+  dt = Math.min(dt, 1 / 30); // cap at ~33ms
+
+  // smooth tilt first
   const tiltSpeed = 12;
   const t = Math.min(1, tiltSpeed * dt);
   tilt.x += (tiltTarget.x - tilt.x) * t;
@@ -430,12 +507,13 @@ function animate(time) {
   updateBoardTilt();
 
   if (!levelComplete) {
-    world.step(1 / 90, dt, 8);
-    checkKeyPickup(); //check if the key is picked up
+    world.step(FIXED_TIME_STEP, dt, MAX_SUB_STEPS);
+    checkKeyPickup();
+    checkKillZone();
     checkGoal();
   } else {
     // 通关后停止物理模拟，让板子还保持最后姿态
-    world.step(1 / 90, dt, 0);
+    world.step(FIXED_TIME_STEP, dt, 0);
   }
 
   // 同步可视化（通关后球已经隐藏）
