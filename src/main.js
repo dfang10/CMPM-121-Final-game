@@ -1,5 +1,7 @@
 import * as THREE from "three";
 import * as CANNON from "cannon-es";
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+
 
 console.log("main.js loaded");
 
@@ -32,6 +34,12 @@ let winShown = false;
 
 let lastTime = 0;
 
+//KEY
+let keyMesh;
+let keyCollected = false;
+const keyWorldPosition = new THREE.Vector3();   // world position of key
+const keyPickupRadius = 0.8;
+
 // physics constraints
 const PHYSICS_BOARD_MARGIN = 5;
 
@@ -42,6 +50,7 @@ createWalls();
 createLid(); //lid cover
 createBall();
 createGoalHole();   // 👈 随机生成终点洞
+createKeyFromGLB();
 initControls();
 animate();
 
@@ -50,7 +59,7 @@ function initScene() {
   scene.background = new THREE.Color(0x202020);
 
   camera = new THREE.PerspectiveCamera(
-    45,
+    60,
     window.innerWidth / window.innerHeight,
     0.1,
     100
@@ -230,6 +239,26 @@ function createLid() {
   boardBody.addShape(lidShape, lidOffset);
 }
 
+function createKeyFromGLB() {
+  const loader = new GLTFLoader();
+
+  loader.load("key_converted.glb", (gltf) => {
+    keyMesh = gltf.scene;
+
+    const margin = 1.5;
+    const range = BOARD_SIZE / 2 - margin;
+    const x = (Math.random() * 2 - 1) * range;
+    const z = (Math.random() * 2 - 1) * range;
+    const y = BOARD_THICK / 2 + 0.2;
+
+    keyMesh.position.set(x, y, z);
+
+    // Adjust scale if needed
+    keyMesh.scale.set(0.3, 0.3, 0.3);
+
+    boardMesh.add(keyMesh);
+  });
+}
 
 function createBall() {
   const geo = new THREE.SphereGeometry(BALL_RADIUS, 32, 32);
@@ -296,8 +325,51 @@ function updateBoardTilt() {
   ballBody.wakeUp && ballBody.wakeUp();
 }
 
+function checkKeyPickup() {
+  // if key doesn't exist or already collected, skip
+  if (!keyMesh || keyCollected) return;
+
+  keyMesh.getWorldPosition(keyWorldPosition);
+
+  const dx = ballBody.position.x - keyWorldPosition.x;
+  const dz = ballBody.position.z - keyWorldPosition.z;
+  const horizontalDist = Math.sqrt(dx * dx + dz * dz);
+
+  if (horizontalDist < keyPickupRadius) {
+    keyCollected = true;
+    keyMesh.visible = false;        // hide it once collected
+    console.log("Key collected!");
+    showKeyMessage();           
+  }
+}
+
+function showKeyMessage() {
+  const div = document.createElement("div");
+  div.textContent = "Key collected!";
+  Object.assign(div.style, {
+    position: "fixed",
+    top: "60px",
+    left: "50%",
+    transform: "translateX(-50%)",
+    color: "#ffffffff",
+    fontSize: "22px",
+    fontFamily: "system-ui, sans-serif",
+    textShadow: "0 0 6px rgba(0,0,0,0.7)",
+    padding: "4px 10px",
+    background: "rgba(0,0,0,0.4)",
+    borderRadius: "8px",
+    zIndex: 9998,
+  });
+  document.body.appendChild(div);
+}
+
 function checkGoal() {
   if (!holeMesh || levelComplete) return;
+
+   if (!keyCollected) {
+    // havent picked it up so no complete   
+    return;
+  }
 
   // 洞在世界坐标中的位置（因为它是 boardMesh 的子物体）
   holeMesh.getWorldPosition(holeWorldPos);
@@ -359,6 +431,7 @@ function animate(time) {
 
   if (!levelComplete) {
     world.step(1 / 90, dt, 8);
+    checkKeyPickup(); //check if the key is picked up
     checkGoal();
   } else {
     // 通关后停止物理模拟，让板子还保持最后姿态
