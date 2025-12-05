@@ -65,11 +65,11 @@ createBoard();
 createWalls();
 createLid(); //lid cover
 createBall();
-createGoalHole();   // 👈 随机生成终点洞
+createGoalHole();   // 随机生成终点洞
 createKillZone();
 initControls();
 animate();
-startLevel(1);   // ⬅️ sets up hole + key + 1 kill zone for level 1
+startLevel(1);   // sets up hole + key + 1 kill zone for level 1
 
 function initScene() {
   scene = new THREE.Scene();
