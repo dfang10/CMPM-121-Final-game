@@ -11,6 +11,10 @@ let boardMesh, boardBody;
 let ballMesh, ballBody;
 const wallMeshes = [];
 
+//levels
+let currentLevel = 1;
+const MAX_LEVEL = 2;
+
 const FIXED_TIME_STEP = 1 / 120; 
 const MAX_SUB_STEPS   = 10;  
 
@@ -39,7 +43,9 @@ let lastTime = 0;
 
 //kill zone
 const KILL_RADIUS = 1.0;
-let killMesh;
+// let killMesh;
+/** @type {THREE.Mesh[]} */
+const killMeshes = [];
 const killWorldPos = new THREE.Vector3();
 
 //KEY
@@ -61,9 +67,9 @@ createLid(); //lid cover
 createBall();
 createGoalHole();   // 👈 随机生成终点洞
 createKillZone();
-createKeyFromGLB();
 initControls();
 animate();
+startLevel(1);   // ⬅️ sets up hole + key + 1 kill zone for level 1
 
 function initScene() {
   scene = new THREE.Scene();
@@ -250,26 +256,26 @@ function createLid() {
   boardBody.addShape(lidShape, lidOffset);
 }
 
-function createKeyFromGLB() {
-  const loader = new GLTFLoader();
+// function createKeyFromGLB() {
+//   const loader = new GLTFLoader();
 
-  loader.load("key_converted.glb", (gltf) => {
-    keyMesh = gltf.scene;
+//   loader.load("key_converted.glb", (gltf) => {
+//     keyMesh = gltf.scene;
 
-    const margin = 1.5;
-    const range = BOARD_SIZE / 2 - margin;
-    const x = (Math.random() * 2 - 1) * range;
-    const z = (Math.random() * 2 - 1) * range;
-    const y = BOARD_THICK / 2 + 0.2;
+//     const margin = 1.5;
+//     const range = BOARD_SIZE / 2 - margin;
+//     const x = (Math.random() * 2 - 1) * range;
+//     const z = (Math.random() * 2 - 1) * range;
+//     const y = BOARD_THICK / 2 + 0.2;
 
-    keyMesh.position.set(x, y, z);
+//     keyMesh.position.set(x, y, z);
 
-    // Adjust scale if needed
-    keyMesh.scale.set(0.3, 0.3, 0.3);
+//     // Adjust scale if needed
+//     keyMesh.scale.set(0.3, 0.3, 0.3);
 
-    boardMesh.add(keyMesh);
-  });
-}
+//     boardMesh.add(keyMesh);
+//   });
+// }
 
 function createKillZone() {
   const margin = 1.5;
@@ -280,12 +286,13 @@ function createKillZone() {
   const y = BOARD_THICK / 2 + 0.001;
 
   const geo = new THREE.CylinderGeometry(KILL_RADIUS, KILL_RADIUS, 0.02, 32);
-  const mat = new THREE.MeshBasicMaterial({ color: 0xff0000 }); // red color zone
+  const mat = new THREE.MeshBasicMaterial({ color: 0xff0000 }); // red color kill zone
 
-  killMesh = new THREE.Mesh(geo, mat);
-  killMesh.position.set(x, y, z);
+  const zoneMesh = new THREE.Mesh(geo, mat);
+  zoneMesh.position.set(x, y, z);
 
-  boardMesh.add(killMesh);
+  boardMesh.add(zoneMesh);
+  killMeshes.push(zoneMesh);
 }
 
 function createBall() {
@@ -371,6 +378,51 @@ function checkKeyPickup() {
   }
 }
 
+function createOrResetKey() {
+  const margin = 1.5;
+  const range = BOARD_SIZE / 2 - margin;
+  const x = (Math.random() * 2 - 1) * range;
+  const z = (Math.random() * 2 - 1) * range;
+  const y = BOARD_THICK / 2 + 0.2;
+
+  // if key already loaded, just move & show it
+  if (keyMesh) {
+    keyMesh.position.set(x, y, z);
+    keyMesh.visible = true;
+    if (!keyMesh.parent) {
+      boardMesh.add(keyMesh);
+    }
+    return;
+  }
+
+  const loader = new GLTFLoader();
+  loader.load("key_converted.glb", (gltf) => {
+    keyMesh = gltf.scene;
+    keyMesh.position.set(x, y, z);
+    keyMesh.scale.set(0.3, 0.3, 0.3);
+    boardMesh.add(keyMesh);
+  });
+}
+
+function clearLevel() {
+  // remove goal hole
+  if (holeMesh) {
+    boardMesh.remove(holeMesh);
+    holeMesh = null;
+  }
+
+  // key: just detach from board (we’ll reuse it)
+  if (keyMesh && keyMesh.parent === boardMesh) {
+    boardMesh.remove(keyMesh);
+  }
+
+  // remove all kill zones
+  killMeshes.forEach((m) => {
+    boardMesh.remove(m);
+  });
+  killMeshes.length = 0;
+}
+
 function showKeyMessage() {
   if (keyMessageDiv) return;
 
@@ -396,16 +448,19 @@ function showKeyMessage() {
 }
 
 function checkKillZone() {
-  if (!killMesh) return;
+  if (!killMeshes.length) return;
 
-  killMesh.getWorldPosition(killWorldPos);
+  for (const zone of killMeshes) {
+    zone.getWorldPosition(killWorldPos);
 
-  const dx = ballBody.position.x - killWorldPos.x;
-  const dz = ballBody.position.z - killWorldPos.z;
-  const horizontalDist = Math.sqrt(dx * dx + dz * dz);
+    const dx = ballBody.position.x - killWorldPos.x;
+    const dz = ballBody.position.z - killWorldPos.z;
+    const horizontalDist = Math.sqrt(dx * dx + dz * dz);
 
-  if (horizontalDist < KILL_RADIUS) {
-    handleDeath();
+    if (horizontalDist < KILL_RADIUS) {
+      handleDeath();
+      break; // no need to check more zones this frame
+    }
   }
 }
 
@@ -424,7 +479,10 @@ function handleDeath() {
   tiltTarget.x = 0;
   tiltTarget.z = 0;
 
-  keyMesh.visible = true;
+  // reset key only if it exists
+  if (keyMesh) {
+    keyMesh.visible = true;
+  }
   keyCollected = false;
 
   if (keyMessageDiv) {
@@ -452,15 +510,65 @@ function checkGoal() {
   const triggerRadius = HOLE_RADIUS * 0.9;
 
   if (horizontalDist < triggerRadius) {
-    levelComplete = true;
+    console.log("Reached goal with key!");
 
-    // 移除物理刚体 & 隐藏球
-    world.removeBody(ballBody);
-    ballMesh.visible = false;
-
-    console.log("Level complete!");
-    showWinMessage();
+    if (currentLevel === 1) {
+      // go to level 2
+      startLevel(2);
+    } else {
+      // level 2 is final
+      levelComplete = true;
+      showWinMessage();
+      console.log("All levels complete!");
+    }
   }
+}
+
+/**
+ * @param {number} level
+ */
+function startLevel(level) {
+  clearLevel();
+
+  currentLevel = level;
+  levelComplete = false;
+  keyCollected = false;
+
+  // reset ball
+  ballBody.position.set(0, 2, 0);
+  ballBody.velocity.set(0, 0, 0);
+  ballBody.angularVelocity.set(0, 0, 0);
+  ballMesh.visible = true;
+
+  // reset board tilt
+  tilt.x = 0;
+  tilt.z = 0;
+  tiltTarget.x = 0;
+  tiltTarget.z = 0;
+
+  // remove key message if it was visible
+  if (keyMessageDiv) {
+    keyMessageDiv.remove();
+    keyMessageDiv = null;
+  }
+
+  // create new goal hole
+  createGoalHole();
+
+  // place key
+  createOrResetKey();
+
+  // create kill zones by level
+  if (level === 1) {
+    // level 1: one death zone
+    createKillZone();
+  } else if (level === 2) {
+    // level 2: two death zones
+    createKillZone();
+    createKillZone();
+  }
+
+  console.log(`Started level ${level}`);
 }
 
 function showWinMessage() {
