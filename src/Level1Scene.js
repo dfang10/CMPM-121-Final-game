@@ -2,6 +2,8 @@
 import * as THREE from "three";
 import * as CANNON from "cannon-es";
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { InputController } from "./InputController.js";
+
 
 export class Level1Scene {
   constructor(renderer) {
@@ -343,21 +345,10 @@ export class Level1Scene {
   }
   
   initControls() {
-    const maxTilt = (25 * Math.PI) / 180; // max 25°
-
-    window.addEventListener("keydown", (e) => {
-      if (this.levelComplete) return;
-      
-      if (e.key === "w" || e.key === "ArrowUp") this.tiltTarget.x = -maxTilt;
-      if (e.key === "s" || e.key === "ArrowDown") this.tiltTarget.x = maxTilt;
-      if (e.key === "a" || e.key === "ArrowLeft") this.tiltTarget.z = maxTilt;
-      if (e.key === "d" || e.key === "ArrowRight") this.tiltTarget.z = -maxTilt;
-    });
-
-    window.addEventListener("keyup", (e) => {
-      if (["w", "ArrowUp", "s", "ArrowDown"].includes(e.key)) this.tiltTarget.x = 0;
-      if (["a", "ArrowLeft", "d", "ArrowRight"].includes(e.key)) this.tiltTarget.z = 0;
-    });
+    this.inputController = new InputController(
+      this.tiltTarget,
+      () => this.levelComplete  // callback to check level completion
+    );
   }
   
   updateBoardTilt() {
