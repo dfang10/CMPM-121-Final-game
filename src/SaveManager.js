@@ -5,7 +5,11 @@ export class SaveManager {
 
   // Save data object to localStorage
   save(data) {
-    localStorage.setItem(this.slotName, JSON.stringify(data));
+    const wrapped = {
+        currentLevel: data.currentLevel,
+        state: data.state
+    };
+    localStorage.setItem(this.slotName, JSON.stringify(wrapped));
   }
 
   // Load and parse JSON

@@ -1,7 +1,6 @@
 // SceneManager.js
 export class SceneManager {
-  constructor(renderer, levelNumber = 1) {
-    this.levelNumber = levelNumber;
+  constructor(renderer) {
     this.renderer = renderer;
     this.currentScene = null;
     this.scenes = new Map();

@@ -8,21 +8,14 @@ import { SaveManager } from "./SaveManager.js";
 
 
 export class Level1Scene {
-  constructor(renderer) {
+  constructor(renderer, levelNumber = 1) {
     this.renderer = renderer;
+    this.levelNumber = levelNumber;
     this.scene = null;
     this.camera = null;
     this.world = null;
 
-    this.levelNumber = 1;
     this.levelRules = null;
-
-    fetch("/levels.json")
-      .then(res => res.json())
-      .then(data => {
-        this.levelRules = data.levelRules;
-        this.init();
-      });
     
     // Game objects
     this.boardMesh = null;
@@ -31,7 +24,7 @@ export class Level1Scene {
     this.ballBody = null;
     this.wallMeshes = [];
     this.holeMesh = null;
-    this.killMesh = null;
+    this.killMeshes = [];
     this.keyMesh = null;
     
     // Game state
@@ -64,6 +57,13 @@ export class Level1Scene {
     this.themableMaterials = [];
 
     this.saveManager = new SaveManager("slot1");
+
+     fetch("/levels.json")
+      .then(res => res.json())
+      .then(data => {
+        this.levelRules = data.levelRules;
+        this.init();
+      });
   }
   
   init() {
@@ -74,7 +74,7 @@ export class Level1Scene {
     this.createLid();
     this.createBall();
     this.createGoalHole();
-    this.createKillZone();
+    this.createKillZones();
     this.createKeyFromGLB();
     this.initControls();
 
@@ -307,26 +307,35 @@ export class Level1Scene {
     this.boardMesh.add(this.keyMesh);
   }
   
-  createKillZone() {
+  createKillZones() {
+    this.killMeshes.forEach(mesh => this.boardMesh.remove(mesh));
+    this.killMeshes = [];
+    
+    const count = Math.min(this.levelNumber, 10);
+
     const margin = 1.5;
     const range = this.BOARD_SIZE / 2 - margin;
 
-    const x = (Math.random() * 2 - 1) * range;
-    const z = (Math.random() * 2 - 1) * range;
-    const y = this.BOARD_THICK / 2 + 0.001;
+    const radius = this.levelRules
+    ? this.levelRules.killZoneStartRadius
+    : this.KILL_RADIUS;
 
-    const base = this.levelRules.killZoneStartRadius;
-    const increase = this.levelRules.killZoneIncreasePerLevel;
+    this.KILL_RADIUS = radius;
 
-    this.KILL_RADIUS = base + increase * (this.levelNumber - 1);
+    for (let i = 0; i < count; i++) {
+      const x = (Math.random() * 2 - 1) * range;
+      const z = (Math.random() * 2 - 1) * range;
+      const y = this.BOARD_THICK / 2 + 0.001;
 
-    const geo = new THREE.CylinderGeometry(this.KILL_RADIUS, this.KILL_RADIUS, 0.02, 32);
-    const mat = new THREE.MeshBasicMaterial({ color: 0xff0000 }); // red color zone
+      const geo = new THREE.CylinderGeometry(radius, radius, 0.02, 32);
+      const mat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
 
-    this.killMesh = new THREE.Mesh(geo, mat);
-    this.killMesh.position.set(x, y, z);
+      const kill = new THREE.Mesh(geo, mat);
+      kill.position.set(x, y, z);
 
-    this.boardMesh.add(this.killMesh);
+      this.boardMesh.add(kill);
+      this.killMeshes.push(kill);
+    }
   }
   
   createBall() {
@@ -435,16 +444,19 @@ export class Level1Scene {
   }
   
   checkKillZone() {
-    if (!this.killMesh) return;
+    if (!this.killMeshes || this.killMeshes.length === 0) return;
 
-    this.killMesh.getWorldPosition(this.killWorldPos);
+    for (const kill of this.killMeshes) {
+      kill.getWorldPosition(this.killWorldPos);
 
-    const dx = this.ballBody.position.x - this.killWorldPos.x;
-    const dz = this.ballBody.position.z - this.killWorldPos.z;
-    const horizontalDist = Math.sqrt(dx * dx + dz * dz);
+      const dx = this.ballBody.position.x - this.killWorldPos.x;
+      const dz = this.ballBody.position.z - this.killWorldPos.z;
+      const dist = Math.sqrt(dx * dx + dz * dz);
 
-    if (horizontalDist < this.KILL_RADIUS) {
-      this.handleDeath();
+      if (dist < this.KILL_RADIUS) {
+        this.handleDeath();
+        return;
+      }
     }
   }
   
@@ -482,49 +494,38 @@ export class Level1Scene {
       return;
     }
 
-    // hole position in world coordinates (it's a child of boardMesh)
     this.holeMesh.getWorldPosition(this.holeWorldPos);
 
     const dx = this.ballBody.position.x - this.holeWorldPos.x;
     const dz = this.ballBody.position.z - this.holeWorldPos.z;
     const horizontalDist = Math.sqrt(dx * dx + dz * dz);
 
-    // trigger radius: slightly smaller than hole for better feel
     const triggerRadius = this.HOLE_RADIUS * 0.9;
 
     if (horizontalDist < triggerRadius) {
+      
       this.levelComplete = true;
+      console.log("Level complete! Loading next level...");
 
-      // remove physics body & hide ball
-      this.world.removeBody(this.ballBody);
-      this.ballMesh.visible = false;
+      // save current state, including currentLevel
+      this.saveManager.save(this.getSaveData());
 
-      console.log("Level complete!");
-      this.showWinMessage();
+      setTimeout(() => {
+        this.loadNextLevel();
+      }, 1000);
     }
   }
   
-  showWinMessage() {
-    if (this.winShown) return;
-    this.winShown = true;
 
-    const div = document.createElement("div");
-    div.textContent = "Level complete!";
-    Object.assign(div.style, {
-      position: "fixed",
-      top: "20px",
-      left: "50%",
-      transform: "translateX(-50%)",
-      color: "#ffffff",
-      fontSize: "28px",
-      fontFamily: "system-ui, sans-serif",
-      textShadow: "0 0 8px rgba(0,0,0,0.7)",
-      padding: "8px 16px",
-      background: "rgba(0,0,0,0.4)",
-      borderRadius: "8px",
-      zIndex: 9999,
+  loadNextLevel() {
+    const nextLevel = this.levelNumber + 1;
+    this.levelNumber = nextLevel;
+
+    this.saveManager.save({
+      currentLevel: nextLevel,
     });
-    document.body.appendChild(div);
+
+    window.sceneManager.switchToScene("level1", nextLevel);
   }
   
   update(time) {
@@ -575,27 +576,30 @@ export class Level1Scene {
 
   getSaveData() {
     return {
-      ball: {
-        x: this.ballBody.position.x,
-        y: this.ballBody.position.y,
-        z: this.ballBody.position.z
-      },
-      tilt: {
-        x: this.tilt.x,
-        z: this.tilt.z
-      },
-      keyCollected: this.keyCollected,
+      currentLevel: this.levelNumber,
+      state: {
+        ball: {
+          x: this.ballBody.position.x,
+          y: this.ballBody.position.y,
+          z: this.ballBody.position.z
+        },
+        tilt: {
+          x: this.tilt.x,
+          z: this.tilt.z
+        },
+        keyCollected: this.keyCollected,
 
-      // save world object positions
-      hole: {
-        x: this.holeMesh.position.x,
-        y: this.holeMesh.position.y,
-        z: this.holeMesh.position.z
-      },
-      killZone: {
-        x: this.killMesh.position.x,
-        y: this.killMesh.position.y,
-        z: this.killMesh.position.z
+        hole: {
+          x: this.holeMesh.position.x,
+          y: this.holeMesh.position.y,
+          z: this.holeMesh.position.z
+        },
+
+        killZones: this.killMeshes.map(mesh => ({
+          x: mesh.position.x,
+          y: mesh.position.y,
+          z: mesh.position.z
+        }))
       }
     };
   }
@@ -603,8 +607,12 @@ export class Level1Scene {
   applySaveData(data) {
     if (!data) return;
 
+    this.levelNumber = data.currentLevel ?? 1;
+
+    const state = data.state ?? data;
+
     // restore ball
-    this.ballBody.position.set(data.ball.x, data.ball.y, data.ball.z);
+    this.ballBody.position.set(state.ball.x, state.ball.y, state.ball.z);
     this.ballMesh.position.copy(this.ballBody.position);
 
     // restore tilt
@@ -614,8 +622,8 @@ export class Level1Scene {
     this.tiltTarget.z = data.tilt.z;
 
     // restore key
-    this.keyCollected = data.keyCollected;
-    if (data.keyCollected && this.keyMesh) {
+    this.keyCollected = state.keyCollected;
+    if (state.keyCollected && this.keyMesh) {
       this.keyMesh.visible = false;
     }
 
@@ -623,7 +631,27 @@ export class Level1Scene {
     this.holeMesh.position.set(data.hole.x, data.hole.y, data.hole.z);
 
     // restore kill zone
-    this.killMesh.position.set(data.killZone.x, data.killZone.y, data.killZone.z);
+    if (state.killZones && Array.isArray(state.killZones)) {
+      
+      this.killMeshes.forEach(mesh => this.boardMesh.remove(mesh));
+      this.killMeshes = [];
+
+      state.killZones.forEach(kz => {
+        const geo = new THREE.CylinderGeometry(
+          this.KILL_RADIUS,
+          this.KILL_RADIUS,
+          0.02,
+          32
+        );
+        const mat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+
+        const kill = new THREE.Mesh(geo, mat);
+        kill.position.set(kz.x, kz.y, kz.z);
+
+        this.boardMesh.add(kill);
+        this.killMeshes.push(kill);
+      });
+    }
   }
 
   
