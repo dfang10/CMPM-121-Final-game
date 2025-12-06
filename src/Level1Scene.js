@@ -4,6 +4,7 @@ import * as CANNON from "cannon-es";
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { InputController } from "./InputController.js";
 import { ThemeManager } from "./ThemeManager.js";
+import { SaveManager } from "./SaveManager.js";
 
 
 export class Level1Scene {
@@ -52,6 +53,8 @@ export class Level1Scene {
     
     this.themableMaterials = [];
 
+    this.saveManager = new SaveManager("slot1");
+
     this.init();
   }
   
@@ -66,6 +69,12 @@ export class Level1Scene {
     this.createKillZone();
     this.createKeyFromGLB();
     this.initControls();
+
+    const saved = this.saveManager.load();
+    if (saved) {
+      console.log("Loaded save:", saved);
+      this.applySaveData(saved);
+    }
   }
   
   initScene() {
@@ -537,7 +546,68 @@ export class Level1Scene {
       this.boardMesh.position.copy(this.boardBody.position);
       this.boardMesh.quaternion.copy(this.boardBody.quaternion);
     }
+
+    if (!this._nextAutosaveTime) this._nextAutosaveTime = time;
+
+    if (time >= this._nextAutosaveTime) {
+      this.saveManager.save(this.getSaveData());
+      this._nextAutosaveTime = time + 1000; // save every second
+    }
   }
+
+  getSaveData() {
+    return {
+      ball: {
+        x: this.ballBody.position.x,
+        y: this.ballBody.position.y,
+        z: this.ballBody.position.z
+      },
+      tilt: {
+        x: this.tilt.x,
+        z: this.tilt.z
+      },
+      keyCollected: this.keyCollected,
+
+      // save world object positions
+      hole: {
+        x: this.holeMesh.position.x,
+        y: this.holeMesh.position.y,
+        z: this.holeMesh.position.z
+      },
+      killZone: {
+        x: this.killMesh.position.x,
+        y: this.killMesh.position.y,
+        z: this.killMesh.position.z
+      }
+    };
+  }
+
+  applySaveData(data) {
+    if (!data) return;
+
+    // restore ball
+    this.ballBody.position.set(data.ball.x, data.ball.y, data.ball.z);
+    this.ballMesh.position.copy(this.ballBody.position);
+
+    // restore tilt
+    this.tilt.x = data.tilt.x;
+    this.tilt.z = data.tilt.z;
+    this.tiltTarget.x = data.tilt.x;
+    this.tiltTarget.z = data.tilt.z;
+
+    // restore key
+    this.keyCollected = data.keyCollected;
+    if (data.keyCollected && this.keyMesh) {
+      this.keyMesh.visible = false;
+    }
+
+    // restore hole position
+    this.holeMesh.position.set(data.hole.x, data.hole.y, data.hole.z);
+
+    // restore kill zone
+    this.killMesh.position.set(data.killZone.x, data.killZone.y, data.killZone.z);
+  }
+
   
   render() {
     this.renderer.render(this.scene, this.camera);

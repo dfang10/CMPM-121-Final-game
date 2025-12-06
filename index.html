@@ -3,8 +3,38 @@
   <head>
     <meta charset="UTF-8" />
     <title>Gravity Maze Prototype</title>
+    <style>
+      #saveSlots button.activeSlot {
+        border: 3px solid #ffcc00;
+        background-color: #fff7cc;
+      }
+    </style>
   </head>
   <body style="margin: 0; overflow: hidden">
+
+    <!-- save slots -->
+    <div id="saveSlots" style="
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      z-index: 9999;
+      display: flex;
+      gap: 8px;
+      font-family: system-ui, sans-serif;
+    ">
+      <div class="slot">
+    <button data-slot="slot1">Load Slot 1</button>
+      <button class="delete" data-delete="slot1">Delete</button>
+    </div>
+    <div class="slot">
+      <button data-slot="slot2">Load Slot 2</button>
+      <button class="delete" data-delete="slot2">Delete</button>
+    </div>
+    <div class="slot">
+      <button data-slot="slot3">Load Slot 3</button>
+      <button class="delete" data-delete="slot3">Delete</button>
+    </div>
+    </div>
     <div id="app"></div>
 
     <!-- 新版 Vite 正确入口！ -->
