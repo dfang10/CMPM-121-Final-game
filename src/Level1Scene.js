@@ -3,6 +3,7 @@ import * as THREE from "three";
 import * as CANNON from "cannon-es";
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { InputController } from "./InputController.js";
+import { ThemeManager } from "./ThemeManager.js";
 
 
 export class Level1Scene {
@@ -78,18 +79,14 @@ export class Level1Scene {
     this.camera.position.set(8, 8, 8);
     this.camera.lookAt(0, 0, 0);
 
+    this.themeManager = new ThemeManager(this.scene); 
+    
     window.addEventListener("resize", () => {
       this.camera.aspect = window.innerWidth / window.innerHeight;
       this.camera.updateProjectionMatrix();
       this.renderer.setSize(window.innerWidth, window.innerHeight);
     });
 
-    const dirLight = new THREE.DirectionalLight(0xffffff, 1);
-    dirLight.position.set(5, 10, 7);
-    this.scene.add(dirLight);
-
-    const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 0.7);
-    this.scene.add(hemi);
   }
   
   initPhysics() {
