@@ -52,6 +52,8 @@ let keyMessageDiv = null;
 // physics constraints
 const PHYSICS_BOARD_MARGIN = 5;
 
+//Detect touch
+const IS_TOUCH_DEVICE  = "ontouchstart" in window || navigator.maxTouchPoints > 0;
 
 initScene();
 initPhysics();
@@ -341,6 +343,10 @@ function initControls() {
     if (["w", "ArrowUp", "s", "ArrowDown"].includes(e.key)) tiltTarget.x = 0;
     if (["a", "ArrowLeft", "d", "ArrowRight"].includes(e.key)) tiltTarget.z = 0;
   });
+
+  if(IS_TOUCH_DEVICE) {
+    createTouchControls(maxTilt);
+  }
 }
 
 function updateBoardTilt() {
@@ -352,6 +358,106 @@ function updateBoardTilt() {
 
   ballBody.wakeUp && ballBody.wakeUp();
 }
+
+function createTouchControls(maxTilt) {
+  const overlay = document.createElement("div");
+  Object.assign(overlay.style, {
+    position: "fixed",
+    inset: "0",
+    pointerEvents: "none",
+    zIndex: 9998,
+  });
+
+  const leftPad = document.createElement("div");
+  Object.assign(leftPad.style, {
+    position: "absolute",
+    left: "0",
+    top: "0",
+    bottom: "0",
+    width: "50%",
+    pointerEvents: "auto",
+    touchAction: "none",
+  });
+
+  const rightPad = document.createElement("div");
+  Object.assign(rightPad.style, {
+    position: "absolute",
+    right: "0",
+    top: "0",
+    bottom: "0",
+    width: "50%",
+    pointerEvents: "auto",
+    touchAction: "none",
+  });
+
+  overlay.appendChild(leftPad);
+  overlay.appendChild(rightPad);
+  document.body.appendChild(overlay);
+
+  // Left Pad: left/right
+ function updateHorizontalFromTouch(e) {
+    e.preventDefault();
+    if (e.touches.length === 0) {
+      tiltTarget.z = 0;
+      return;
+    }
+    const touch = e.touches[0];
+    const rect = leftPad.getBoundingClientRect();
+    const midX = rect.left + rect.width / 2;
+
+    if (touch.clientX < midX) {
+      tiltTarget.z = maxTilt;
+    } else {
+      tiltTarget.z = -maxTilt;
+    }
+  }
+
+  function resetHorizontal() {
+    tiltTarget.z = 0;
+  }
+
+  leftPad.addEventListener("touchstart", updateHorizontalFromTouch, {
+    passive: false,
+  });
+  leftPad.addEventListener("touchmove", updateHorizontalFromTouch, {
+    passive: false,
+  });
+  leftPad.addEventListener("touchend", resetHorizontal);
+  leftPad.addEventListener("touchcancel", resetHorizontal);
+
+// Right pad: forward/back
+  function updateVerticalFromTouch(e) {
+    e.preventDefault();
+    if (e.touches.length === 0) {
+      tiltTarget.x = 0;
+      return;
+    }
+    const touch = e.touches[0];
+    const rect = rightPad.getBoundingClientRect();
+    const midY = rect.top + rect.height / 2;
+
+    if (touch.clientY < midY) {
+      tiltTarget.x = -maxTilt;
+    } else {
+      tiltTarget.x = maxTilt;
+    }
+  }
+
+  function resetVertical() {
+    tiltTarget.x = 0;
+  }
+
+  rightPad.addEventListener("touchstart", updateVerticalFromTouch, {
+    passive: false,
+  });
+  rightPad.addEventListener("touchmove", updateVerticalFromTouch, {
+    passive: false,
+  });
+  rightPad.addEventListener("touchend", resetVertical);
+  rightPad.addEventListener("touchcancel", resetVertical);
+}
+
+
 
 function checkKeyPickup() {
   // if key doesn't exist or already collected, skip
