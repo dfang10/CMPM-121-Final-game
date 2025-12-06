@@ -50,6 +50,8 @@ export class Level1Scene {
     this.killWorldPos = new THREE.Vector3();
     this.keyWorldPosition = new THREE.Vector3();
     
+    this.themableMaterials = [];
+
     this.init();
   }
   
@@ -79,7 +81,7 @@ export class Level1Scene {
     this.camera.position.set(8, 8, 8);
     this.camera.lookAt(0, 0, 0);
 
-    this.themeManager = new ThemeManager(this.scene); 
+    this.themeManager = new ThemeManager(this.scene, this.themableMaterials); 
 
     window.addEventListener("resize", () => {
       this.camera.aspect = window.innerWidth / window.innerHeight;
@@ -106,6 +108,7 @@ export class Level1Scene {
     // three.js board
     const geo = new THREE.BoxGeometry(this.BOARD_SIZE, this.BOARD_THICK, this.BOARD_SIZE);
     const mat = new THREE.MeshStandardMaterial({ color: 0x1e90ff });
+    this.themableMaterials.push(mat);
     this.boardMesh = new THREE.Mesh(geo, mat);
     this.scene.add(this.boardMesh);
 
@@ -141,6 +144,7 @@ export class Level1Scene {
     const bottomMat = new THREE.MeshStandardMaterial({
       color: 0x1e90ff,  
     });
+    this.themableMaterials.push(bottomMat);
 
     const topMat = new THREE.MeshPhysicalMaterial({
       color: 0x144a9b, 
@@ -334,6 +338,7 @@ export class Level1Scene {
 
     const geo = new THREE.CylinderGeometry(this.HOLE_RADIUS, this.HOLE_RADIUS, 0.02, 32);
     const mat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+
     this.holeMesh = new THREE.Mesh(geo, mat);
     this.holeMesh.position.set(x, y, z);
 
@@ -503,7 +508,7 @@ export class Level1Scene {
     const dt = Math.min(timeSinceLastCalled, 1 / 30); // cap at ~33ms
 
     if (this.themeManager) this.themeManager.update(dt);
-    
+
     // smooth tilt first
     const tiltSpeed = 12;
     const t = Math.min(1, tiltSpeed * dt);
