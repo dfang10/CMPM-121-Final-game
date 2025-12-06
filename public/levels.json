@@ -1,0 +1,7 @@
+{
+  "levelRules": {
+    "killZoneStartRadius": 1.0,
+    "killZoneIncreasePerLevel": 0.4,
+    "holeRadius": 0.9
+  }
+}

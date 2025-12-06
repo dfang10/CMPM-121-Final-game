@@ -13,6 +13,16 @@ export class Level1Scene {
     this.scene = null;
     this.camera = null;
     this.world = null;
+
+    this.levelNumber = 1;
+    this.levelRules = null;
+
+    fetch("/levels.json")
+      .then(res => res.json())
+      .then(data => {
+        this.levelRules = data.levelRules;
+        this.init();
+      });
     
     // Game objects
     this.boardMesh = null;
@@ -54,8 +64,6 @@ export class Level1Scene {
     this.themableMaterials = [];
 
     this.saveManager = new SaveManager("slot1");
-
-    this.init();
   }
   
   init() {
@@ -307,6 +315,11 @@ export class Level1Scene {
     const z = (Math.random() * 2 - 1) * range;
     const y = this.BOARD_THICK / 2 + 0.001;
 
+    const base = this.levelRules.killZoneStartRadius;
+    const increase = this.levelRules.killZoneIncreasePerLevel;
+
+    this.KILL_RADIUS = base + increase * (this.levelNumber - 1);
+
     const geo = new THREE.CylinderGeometry(this.KILL_RADIUS, this.KILL_RADIUS, 0.02, 32);
     const mat = new THREE.MeshBasicMaterial({ color: 0xff0000 }); // red color zone
 
@@ -345,7 +358,12 @@ export class Level1Scene {
     const z = (Math.random() * 2 - 1) * range;
     const y = this.BOARD_THICK / 2 + 0.001; // almost on board surface
 
-    const geo = new THREE.CylinderGeometry(this.HOLE_RADIUS, this.HOLE_RADIUS, 0.02, 32);
+    const geo = new THREE.CylinderGeometry(
+      this.levelRules.holeRadius,
+      this.levelRules.holeRadius,
+      0.02,
+      32
+    );
     const mat = new THREE.MeshBasicMaterial({ color: 0x000000 });
 
     this.holeMesh = new THREE.Mesh(geo, mat);
