@@ -80,7 +80,7 @@ export class Level1Scene {
     this.camera.lookAt(0, 0, 0);
 
     this.themeManager = new ThemeManager(this.scene); 
-    
+
     window.addEventListener("resize", () => {
       this.camera.aspect = window.innerWidth / window.innerHeight;
       this.camera.updateProjectionMatrix();
@@ -502,6 +502,8 @@ export class Level1Scene {
     // clamp dt so a giant lag spike doesn't explode physics
     const dt = Math.min(timeSinceLastCalled, 1 / 30); // cap at ~33ms
 
+    if (this.themeManager) this.themeManager.update(dt);
+    
     // smooth tilt first
     const tiltSpeed = 12;
     const t = Math.min(1, tiltSpeed * dt);
